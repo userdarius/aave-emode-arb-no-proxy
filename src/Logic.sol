@@ -98,7 +98,7 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
 
         amount = _amountDeposited * (_leverageRatio - 1);
 
-        requestFlashLoan(address_long, amount); //TODO: add the necessary arguments
+        requestFlashLoan(address_long, amount); // TODO: add the necessary arguments
 
         return amount;
     }
@@ -166,6 +166,7 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         address tokenAfterSwap
     ) internal returns (uint256 amountIn) {
         //We use the lowest fee tier for the pool
+        console.log("Entering craftSwap");
         uint24 poolFee = 100; //UniswapV3Pool(address_pool).fee();
 
         ISwapRouter.ExactOutputSingleParams memory params = ISwapRouter
@@ -182,8 +183,10 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
 
         //AaveTransferHelper.safeTransferFrom(tokenBeforeSwap, owner, address(msg.sender), amountIn);
         //AaveTransferHelper.safeTransfer(tokenBeforeSwap, swapRouterAddr ,amountIn );
-
+        console.log("Swap params have been generated");
+        console.log("Swap is going to be executed");
         amountIn = ISwapRouter(swapRouterAddr).exactOutputSingle(params);
+        console.log("swap has been executed");
         // if (amountIn < amountInMaximum) {
         //     AaveTransferHelper.safeApprove(tokenBeforeSwap, swapRouterAddr, 0);
         //     //AaveTransferHelper.safeTransferFrom(tokenBeforeSwap, msg.sender, swapRouterAddr, amountIn);
@@ -206,7 +209,16 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         // deposit flashloaned longed asset on Aave
 
         uint16 referralCode = 0;
+        console.log("AMOUNT BEFORE:", totalBalance);
+
         POOL.supply(address_long, totalBalance, address(this), referralCode);
+        console.log(
+            "AMOUNT AFTER:",
+            IERC20(address_long).balanceOf(address(this))
+        );
+
+        (uint256 balance, , , , , ) = POOL.getUserAccountData(address(this));
+        console.log("balance is ", balance);
         // borrow phase on aave (this next part is tricky)
         // fetch the pool configuration from the reserve data
         uint256 configuration = POOL
@@ -217,6 +229,8 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         uint8 categoryId = fetchBits(configuration);
         // activate emode for this contract
         POOL.setUserEMode(categoryId);
+
+        console.log(POOL.getUserEMode(address(this)));
         // borrow short_token
         POOL.borrow(
             address_short,
@@ -228,7 +242,8 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         uint256 shortTokenBalance = IERC20(address_short).balanceOf(
             address(this)
         );
-
+        console.log("shortToken balance is ", shortTokenBalance);
+        console.log("CraftSwap is going to be called");
         //swaping shortToken to longToken to repay the flashloan
         craftSwap(_repayAmount, shortTokenBalance, address_short, address_long);
     }
