@@ -20,15 +20,20 @@ contract LogicTest is HelperTest {
         );
     }
 
-    // function testConstructor() public {
-    //     assertEq(logic.aaveAddressProvider(), AAVE_ADDRESS_PROVIDER);
-    //     assertEq(logic.uniswapRouter(), UNISWAP_ROUTER);
-    //     assertEq(logic.wETH(), Mainnet_wETH);
-    //     assertEq(logic.wstETH(), Mainnet_wstETH);
-    // }
-
     function testGetAmountIn() public {
-        uint256 amountIn = logic.getAmountIn();
+        uint256 amountIn = logic.getAmountIn(10000);
         console.log("amountIn: ", amountIn);
+    }
+
+    function testLongDepositedCraft() public {
+        uint256 amountIn = logic.getAmountIn(10000);
+        console.log("amountIn: ", amountIn);
+        vm.startPrank(USER);
+        AaveTransferHelper.safeApprove(
+            Mainnet_wstETH,
+            address(logic),
+            amountIn
+        );
+        logic.longDepositedCraft(amountIn, 10);
     }
 }

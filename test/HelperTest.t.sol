@@ -15,10 +15,10 @@ contract HelperTest is Test {
     address quoteRouter = 0x61fFE014bA17989E743c5F6cB21bF9697530B21e;
 
     function setUp() public virtual {
-        deal(DEPLOYER, 10 ether);
-        deal(USER, 10 ether);
-        deal(Mainnet_wETH, USER, 10 ether);
-        deal(Mainnet_wstETH, USER, 10 ether);
+        deal(DEPLOYER, 100 ether);
+        deal(USER, 100 ether);
+        deal(Mainnet_wETH, USER, 100 ether);
+        deal(Mainnet_wstETH, USER, 100 ether);
         console.log("dealt the money to deployer and user");
     }
 }
