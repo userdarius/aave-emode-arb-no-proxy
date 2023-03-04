@@ -209,16 +209,14 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         // deposit flashloaned longed asset on Aave
 
         uint16 referralCode = 0;
-        console.log("AMOUNT BEFORE:", totalBalance);
+        console.log("AMOUNT supplied:", totalBalance);
 
         POOL.supply(address_long, totalBalance, address(this), referralCode);
         console.log(
-            "AMOUNT AFTER:",
+            "AMOUNT AFTER: supply",
             IERC20(address_long).balanceOf(address(this))
         );
 
-        (uint256 balance, , , , , ) = POOL.getUserAccountData(address(this));
-        console.log("balance is ", balance);
         // borrow phase on aave (this next part is tricky)
         // fetch the pool configuration from the reserve data
         uint256 configuration = POOL
@@ -232,6 +230,8 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
 
         console.log(POOL.getUserEMode(address(this)));
         // borrow short_token
+        console.log("trying to borrow shortToken");
+        console.log("amount to borrow in shortToken ", _repayAmount);
         POOL.borrow(
             address_short,
             _repayAmount,
@@ -239,6 +239,7 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
             referralCode,
             address(this)
         );
+        console.log("The borrow went through and the balance of shortToken");
         uint256 shortTokenBalance = IERC20(address_short).balanceOf(
             address(this)
         );

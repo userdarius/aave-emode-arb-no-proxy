@@ -26,7 +26,7 @@ contract LogicTest is HelperTest {
     }
 
     function testLongDepositedCraft() public {
-        uint256 amountIn = logic.getAmountIn(10000);
+        uint256 amountIn = logic.getAmountIn(1 ether);
         console.log("amountIn: ", amountIn);
         vm.startPrank(USER);
         AaveTransferHelper.safeApprove(
@@ -34,6 +34,7 @@ contract LogicTest is HelperTest {
             address(logic),
             amountIn
         );
-        logic.longDepositedCraft(amountIn, 10);
+        logic.longDepositedCraft(amountIn, 1 ether);
+        vm.stopPrank();
     }
 }
