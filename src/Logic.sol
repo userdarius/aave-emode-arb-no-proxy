@@ -15,12 +15,12 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
     address public owner;
     address public address_short;
     address public address_long;
+    bool internal unwind = false;
 
     address public immutable swapRouterAddr;
     address public immutable quoterRouterAddr;
 
-    modifier ifOwner() {
-        console.log("Entering ifOwner");
+    modifier onlyOwner() {
         require(msg.sender == owner, "Unauthorized");
         _;
     }
@@ -32,7 +32,7 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         address _owner,
         address _address_short,
         address _address_long
-    )
+            )
         FlashLoanSimpleReceiverBase(
             IPoolAddressesProvider(_aaveAddressProvider)
         )
@@ -44,14 +44,14 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         address_long = _address_long;
     }
 
-    function getAmountIn(uint256 amount) public returns (uint256) {
+    function getAmountIn(uint256 amount, address token0, address token1) public returns (uint256) {
         (uint256 amountIn, , , ) = IQuoterV2(quoterRouterAddr)
             .quoteExactOutputSingle(
                 IQuoterV2.QuoteExactOutputSingleParams({
-                    tokenIn: address_long,
-                    tokenOut: address_short,
+                    tokenIn: token0,
+                    tokenOut: token1,
                     amount: amount,
-                    fee: 100,
+                    fee: 500,
                     sqrtPriceLimitX96: 0
                 })
             );
@@ -70,19 +70,19 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         return owner;
     }
 
-    // function craftPosition(
-    //     bool depositIsLong,
-    //     uint256 _amountDeposited,
-    //     uint256 _leverageRatio
-    // ) public override ifOwner returns (bool success) {
-    //     if (depositIsLong) {
-    //         longDepositedCraft(_amountDeposited, _leverageRatio);
-    //     } else {
-    //         shortDepositedCraft(_amountDeposited, _leverageRatio);
-    //     }
-    //     success = true;
-    //     return success;
-    // }
+    function craftPosition(
+        bool depositIsLong,
+        uint256 _amountDeposited,
+        uint256 _leverageRatio
+    ) public onlyOwner returns (bool success) {
+        if (depositIsLong) {
+            longDepositedCraft(_amountDeposited, _leverageRatio);
+        } else {
+            //shortDepositedCraft(_amountDeposited, _leverageRatio);
+        }
+        success = true;
+        return success;
+    }
 
     function longDepositedCraft(
         uint256 _amountDeposited,
@@ -160,43 +160,40 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
     function craftSwap(
         //TODO: use this example (no need to know the pool address beforehand)
         //https://docs.uniswap.org/contracts/v3/guides/swaps/single-swaps#a-complete-single-swap-contract
-        uint256 amountOut,
-        uint256 amountInMaximum,
+        uint256 amountIn,
         address tokenBeforeSwap,
         address tokenAfterSwap
-    ) internal returns (uint256 amountIn) {
+    ) internal returns (uint256 amountOut) {
         //We use the lowest fee tier for the pool
-        console.log("Entering craftSwap");
-        uint24 poolFee = 100; //UniswapV3Pool(address_pool).fee();
+        uint24 poolFee = 500; //UniswapV3Pool(address_pool).fee();
 
-        ISwapRouter.ExactOutputSingleParams memory params = ISwapRouter
-            .ExactOutputSingleParams({
+        AaveTransferHelper.safeApprove(tokenBeforeSwap, address(swapRouterAddr), amountIn);
+
+        // Approve the router to spend DAI.
+
+        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
+            .ExactInputSingleParams({
                 tokenIn: tokenBeforeSwap,
                 tokenOut: tokenAfterSwap,
                 fee: poolFee,
                 recipient: address(this),
                 deadline: block.timestamp,
-                amountOut: amountOut,
-                amountInMaximum: amountInMaximum,
+                amountIn: amountIn,
+                amountOutMinimum: 0,
                 sqrtPriceLimitX96: 0
             });
 
-        //AaveTransferHelper.safeTransferFrom(tokenBeforeSwap, owner, address(msg.sender), amountIn);
-        //AaveTransferHelper.safeTransfer(tokenBeforeSwap, swapRouterAddr ,amountIn );
-        console.log("Swap params have been generated");
-        console.log("Swap is going to be executed");
-        amountIn = ISwapRouter(swapRouterAddr).exactOutputSingle(params);
-        console.log("swap has been executed");
-        // if (amountIn < amountInMaximum) {
-        //     AaveTransferHelper.safeApprove(tokenBeforeSwap, swapRouterAddr, 0);
-        //     //AaveTransferHelper.safeTransferFrom(tokenBeforeSwap, msg.sender, swapRouterAddr, amountIn);
-        // }
-        // AaveTransferHelper.safeTransfer(tokenAfterSwap, msg.sender, amountOut);
-        return amountIn;
+
+        amountOut = ISwapRouter(swapRouterAddr).exactInputSingle(params);
+
+        return amountOut;
     }
 
     function prepareRepayement(uint256 _repayAmount) internal {
         //TODO: move this part
+
+        uint256 amountIn = getAmountIn(_repayAmount, address_short, address_long);
+
         uint256 totalBalance = IERC20(address_long).balanceOf(address(this));
 
         AaveTransferHelper.safeApprove(
@@ -209,13 +206,10 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         // deposit flashloaned longed asset on Aave
 
         uint16 referralCode = 0;
-        console.log("AMOUNT supplied:", totalBalance);
+
 
         POOL.supply(address_long, totalBalance, address(this), referralCode);
-        console.log(
-            "AMOUNT AFTER: supply",
-            IERC20(address_long).balanceOf(address(this))
-        );
+
 
         // borrow phase on aave (this next part is tricky)
         // fetch the pool configuration from the reserve data
@@ -228,54 +222,77 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         // activate emode for this contract
         POOL.setUserEMode(categoryId);
 
-        console.log(POOL.getUserEMode(address(this)));
         // borrow short_token
-        console.log("trying to borrow shortToken");
-        console.log("amount to borrow in shortToken ", _repayAmount);
         POOL.borrow(
             address_short,
-            _repayAmount,
+            amountIn,
             2,
             referralCode,
             address(this)
         );
-        console.log("The borrow went through and the balance of shortToken");
+
         uint256 shortTokenBalance = IERC20(address_short).balanceOf(
             address(this)
         );
-        console.log("shortToken balance is ", shortTokenBalance);
-        console.log("CraftSwap is going to be called");
         //swaping shortToken to longToken to repay the flashloan
-        craftSwap(_repayAmount, shortTokenBalance, address_short, address_long);
+        craftSwap(shortTokenBalance , address_short, address_long);
     }
 
-    // function unwindPosition(uint256 shortDebt)
-    //     public
-    //     override
-    //     ifOwner
-    //     returns (bool success)
-    // {
-    //     address variableDebt = POOL
-    //         .getReserveData(address_short)
-    //         .variableDebtTokenAddress;
-    //     IERC20 variableDebtToken = IERC20(variableDebt);
-    //     uint256 variableDebtBalance = variableDebtToken.balanceOf(
-    //         address(this)
-    //     ); //TODO
+    function prepareUnwind(uint256 _repayAmount) internal {
 
-    //     requestFlashLoan(address_short, variableDebtBalance);
-    //     //TODO: deposit on aave
-    //     POOL.repay(address_short, variableDebtBalance, 2, address(this)); //TODO
+        uint256 amountIn = getAmountIn(_repayAmount, address_long, address_short);
 
-    //     craftSwap(
-    //         variableDebtBalance,
-    //         IERC20(address_short).balanceOf(address(this)), //TODO
-    //         address_long,
-    //         address_short
-    //     );
+        uint256 totalBalance = IERC20(address_short).balanceOf(address(this));
 
-    //     return true;
-    // }
+        //TODO check if this is needed to repay the flashloan
+        AaveTransferHelper.safeApprove(
+            address_short,
+            address(POOL),
+            totalBalance
+        );
+        console.log("totalBalance", IERC20(address_short).balanceOf(address(this)));
+
+        POOL.repay(address_short, _repayAmount, 2, address(this)); //TODO
+        console.log("totalBalance", IERC20(address_short).balanceOf(address(this)));
+        console.log("totalBalance", IERC20(address_long).balanceOf(address(this)));
+
+        POOL.withdraw(address_long, 2**256-1, address(this)); //TODO
+        console.log("totalBalance", IERC20(address_long).balanceOf(address(this)));
+        
+
+        uint256 longTokenBalance = IERC20(address_long).balanceOf(
+            address(this)
+        );
+
+        craftSwap(
+            longTokenBalance,
+            address_long,
+            address_short
+        );
+        
+        console.log("totalBalance", IERC20(address_short).balanceOf(address(this)));
+        console.log("totalBalance", IERC20(address_long).balanceOf(address(this)));
+    }
+
+    function unwindPosition()
+        public
+        returns (bool success)
+    {
+        address variableDebt = POOL
+            .getReserveData(address_short)
+            .variableDebtTokenAddress;
+        IERC20 variableDebtToken = IERC20(variableDebt);
+        uint256 variableDebtBalance = variableDebtToken.balanceOf(
+            address(this)
+        ); //TODO
+
+        unwind = true;
+        requestFlashLoan(address_short, variableDebtBalance);
+
+        AaveTransferHelper.safeTransfer(address_long, owner,  IERC20(address_long).balanceOf(address(this)));
+        AaveTransferHelper.safeTransfer(address_short, owner,  IERC20(address_short).balanceOf(address(this)));
+        return true;
+    }
 
     function requestFlashLoan(address _token, uint256 _amount) internal {
         address receiverAddress = address(this);
@@ -300,18 +317,26 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         address initiator,
         bytes calldata params
     ) external override returns (bool) {
-        //TODO: calculate how much short token should be sold (= repayAmount) to get enough longToken to repay the flashloan (= amount)
-        uint256 repayAmount = amount + premium; //TODO: use the uniswap functions to calculate the amountIn (=> borrowAmount) to be able to repay the flashloan
-        uint256 amountIn = getAmountIn(repayAmount);
-        prepareRepayement(amountIn);
+        if (!unwind){
+            //TODO: calculate how much short token should be sold (= repayAmount) to get enough longToken to repay the flashloan (= amount)
+            uint256 repayAmount = amount + premium;
 
-        // require(msg.sender == address(POOL), "Unauthorized");
-        // require(initiator == address(this), "Unauthorized");
+            prepareRepayement(repayAmount);
 
-        // Approve the Pool contract allowance to *pull* the owed amount
-        IERC20(asset).approve(address(POOL), repayAmount);
+            // require(msg.sender == address(POOL), "Unauthorized");
+            // require(initiator == address(this), "Unauthorized");
 
-        return true;
+            // Approve the Pool contract allowance to *pull* the owed amount
+
+            IERC20(asset).approve(address(POOL), repayAmount);
+            return true;
+        } else {
+            uint256 repayAmount = amount + premium;
+            prepareUnwind(repayAmount);
+
+            IERC20(asset).approve(address(POOL), repayAmount);
+            return true;
+        }
     }
 
     function fetchBits(uint256 x) public pure returns (uint8) {

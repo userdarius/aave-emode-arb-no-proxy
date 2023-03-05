@@ -17,8 +17,8 @@ contract HelperTest is Test {
     function setUp() public virtual {
         deal(DEPLOYER, 100 ether);
         deal(USER, 100 ether);
-        deal(Mainnet_wETH, USER, 100 ether);
-        deal(Mainnet_wstETH, USER, 100 ether);
+        deal(Mainnet_wETH, USER, 3 ether);
+        deal(Mainnet_wstETH, USER, 3 ether);
         console.log("dealt the money to deployer and user");
     }
 }
