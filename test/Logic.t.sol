@@ -69,8 +69,9 @@ contract LogicTest is HelperTest {
             address(logic),
             3 ether
         );
+        
+        logic.longDepositedCraft(3 ether, 10, 1, 2);
         vm.stopPrank();
-        logic.longDepositedCraft(3 ether, 10);
         console.log("BALANCE TOKEN1 LOGIC BETWEEN:", IERC20(Mainnet_wETH).balanceOf(address(logic)));
         console.log("BALANCE TOKEN2 LOGIC BETWEEN:", IERC20(Mainnet_wstETH).balanceOf(address(logic)));
         console.log("BALANCE TOKEN1 USER BETWEEN:", IERC20(Mainnet_wETH).balanceOf(USER));
@@ -78,7 +79,7 @@ contract LogicTest is HelperTest {
 
         vm.warp(block.timestamp + 100 days);
 
-        logic.unwindPosition();
+        logic.unwindPosition(1, 2);
 
         console.log("BALANCE TOKEN1 LOGIC AFTER:", IERC20(Mainnet_wETH).balanceOf(address(logic)));
         console.log("BALANCE TOKEN2 LOGIC AFTER:", IERC20(Mainnet_wstETH).balanceOf(address(logic)));
