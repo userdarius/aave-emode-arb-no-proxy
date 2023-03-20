@@ -62,20 +62,6 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         return amountIn;
     }
 
-    // function craftPosition(
-    //     bool depositIsLong,
-    //     uint256 _amountDeposited,
-    //     uint256 _leverageRatio
-    // ) public override ifOwner returns (bool success) {
-    //     if (depositIsLong) {
-    //         longDepositedCraft(_amountDeposited, _leverageRatio);
-    //     } else {
-    //         shortDepositedCraft(_amountDeposited, _leverageRatio);
-    //     }
-    //     success = true;
-    //     return success;
-    // }
-
     function longDepositedCraft(
         uint256 _amountDeposited,
         uint256 _leverageRatio,
@@ -95,6 +81,30 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         requestFlashLoan(
             longTokenAddress,
             amount,
+            true,
+            _shortToLongRate,
+            _slippagePercent
+        );
+    }
+
+    function shortDepositedCraft(
+        uint256 _amountDeposited,
+        uint256 _leverageRatio,
+        uint256 _shortToLongRate,
+        uint256 _slippagePercent) 
+        external ifOwner {
+        //pulling the tokens from the user into the contract
+        AaveTransferHelper.safeTransferFrom(
+            shortTokenAddress,
+            owner,
+            address(this),
+            _amountDeposited
+        );
+        uint256 value = _amountDeposited*_shortToLongRate;//TODO:do we need to multiply by 10**18
+        uint256 amountToFlash = value*_leverageRatio;
+        requestFlashLoan(
+            shortTokenAddress,
+            amountToFlash,
             true,
             _shortToLongRate,
             _slippagePercent
@@ -140,8 +150,8 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
             "AMOUNT AFTER SUPPLYING TO AAVE (should be 0)",
             IERC20(longTokenAddress).balanceOf(address(this))
         );
-
-        checkMaxBorrowableAmount(POOL, longTokenAddress, _repayAmount);
+        uint256 initialShortTokenBalance = IERC20(shortTokenAddress).balanceOf(address(this));
+        checkMaxBorrowableAmount(POOL, longTokenAddress, _repayAmount-initialShortTokenBalance);
 
         // borrow phase on aave (this next part is tricky)
         // fetch the pool configuration from the reserve data
@@ -162,7 +172,7 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         );
         POOL.borrow(
             shortTokenAddress,
-            _repayAmount,
+            _repayAmount-initialShortTokenBalance,
             2,
             referralCode,
             address(this)
@@ -209,7 +219,7 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         address lendingPoolAddress, // address of the Aave lending pool contract
         address assetToBorrow, // address of the asset to borrow
         uint256 flashLoanAmount // amount of the flash loan
-    ) external view returns (bool) {
+    ) internal view returns (bool) {
         ILendingPool lendingPool = ILendingPool(lendingPoolAddress);
         (
             ,
@@ -251,63 +261,10 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         POOL.withdraw(longTokenAddress, type(uint).max, address(this));
         //sell enough longToken for shortToken to repay the flashloan
         uint256 amountIn = ((_repayAmount / _shortToLongRate) *
-            (100 + _slippagePercent)) / 100; //TODO: (use the twap + 1% to account for slippage) * _repayAmount
+            (100 + _slippagePercent)) / 100; 
         //swaping shortToken to longToken to repay the flashloan
         craftSwap(amountIn, _repayAmount, longTokenAddress, shortTokenAddress);
     }
-
-    // function shortDepositedCraft(
-    //     uint256 _amountDeposited,
-    //     uint256 _leverageRatio
-    // ) internal returns (uint256) {
-    //     uint256 amountIn = getAmountIn(
-    //         shortTokenAddress,
-    //         longTokenAddress,
-    //         _amountDeposited,
-    //         100
-    //     );
-
-    //     uint256 amount = amountIn * _amountDeposited * _leverageRatio;
-
-    //     AaveTransferHelper.safeTransferFrom(
-    //         longTokenAddress,
-    //         msg.sender,
-    //         address(this),
-    //         amountIn * _amountDeposited
-    //     );
-
-    //     requestFlashLoan(longTokenAddress, amount);
-
-    //     uint16 referralCode = 0;
-    //     AaveTransferHelper.safeTransferFrom(
-    //         longTokenAddress,
-    //         owner,
-    //         address(this),
-    //         amount
-    //     );
-    //     AaveTransferHelper.safeApprove(longTokenAddress, address(POOL), amount);
-    //     POOL.supply(longTokenAddress, amount, msg.sender, referralCode);
-
-    //     uint256 configuration = POOL
-    //         .getReserveData(longTokenAddress)
-    //         .configuration
-    //         .data;
-
-    //     uint8 categoryId = fetchBits(configuration);
-
-    //     POOL.setUserEMode(categoryId);
-
-    //     // borrow short_token
-    //     POOL.borrow(
-    //         shortTokenAddress,
-    //         amount - _amountDeposited,
-    //         2,
-    //         referralCode,
-    //         address(this)
-    //     );
-
-    //     return amount - _amountDeposited;
-    // }
 
     // SWAP CRAFTER
     function craftSwap(
