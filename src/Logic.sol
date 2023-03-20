@@ -1,14 +1,14 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {FlashLoanSimpleReceiverBase} from "lib/aave-v3-core/contracts/flashloan/base/FlashLoanSimpleReceiverBase.sol";
-import {IPoolAddressesProvider} from "lib/aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol";
-import {IERC20} from "lib/aave-v3-core/contracts/dependencies/openzeppelin/contracts/IERC20.sol";
+import {FlashLoanSimpleReceiverBase} from "aave-v3-core/contracts/flashloan/base/FlashLoanSimpleReceiverBase.sol";
+import {IPoolAddressesProvider} from "aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol";
+import {IERC20} from "aave-v3-core/contracts/dependencies/openzeppelin/contracts/IERC20.sol";
 import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import "../lib/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import "./AaveTransferHelper.sol";
-import "../lib/v3-periphery/contracts/interfaces/IQuoterV2.sol";
 import "./interfaces/IFlashLoan.sol";
+import "aave-v3-core/contracts/interfaces/IPool.sol";
 import "forge-std/Test.sol";
 
 contract Logic is FlashLoanSimpleReceiverBase, Test {
@@ -17,7 +17,6 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
     address public longTokenAddress;
 
     address public immutable swapRouterAddr;
-    address public immutable quoterRouterAddr;
 
     modifier ifOwner() {
         console.log("Entering ifOwner");
@@ -28,7 +27,6 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
     constructor(
         address _aaveAddressProvider,
         address _swapRouterAddr,
-        address _quoterRouterAddr,
         address _owner,
         address _shortTokenAddress,
         address _longTokenAddress
@@ -38,28 +36,9 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         )
     {
         swapRouterAddr = _swapRouterAddr;
-        quoterRouterAddr = _quoterRouterAddr;
         owner = _owner;
         shortTokenAddress = _shortTokenAddress;
         longTokenAddress = _longTokenAddress;
-    }
-
-    function getAmountIn(
-        uint256 amount,
-        address _tokenIn,
-        address _tokenOut
-    ) public returns (uint256) {
-        (uint256 amountIn, , , ) = IQuoterV2(quoterRouterAddr)
-            .quoteExactOutputSingle(
-                IQuoterV2.QuoteExactOutputSingleParams({
-                    tokenIn: _tokenIn,
-                    tokenOut: _tokenOut,
-                    amount: amount,
-                    fee: 100,
-                    sqrtPriceLimitX96: 0
-                })
-            );
-        return amountIn;
     }
 
     function longDepositedCraft(
@@ -151,7 +130,7 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
             IERC20(longTokenAddress).balanceOf(address(this))
         );
         uint256 initialShortTokenBalance = IERC20(shortTokenAddress).balanceOf(address(this));
-        checkMaxBorrowableAmount(POOL, longTokenAddress, _repayAmount-initialShortTokenBalance);
+        checkMaxBorrowableAmount(longTokenAddress, _repayAmount-initialShortTokenBalance);
 
         // borrow phase on aave (this next part is tricky)
         // fetch the pool configuration from the reserve data
@@ -216,11 +195,9 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
     }
 
     function checkMaxBorrowableAmount(
-        address lendingPoolAddress, // address of the Aave lending pool contract
         address assetToBorrow, // address of the asset to borrow
         uint256 flashLoanAmount // amount of the flash loan
     ) internal view returns (bool) {
-        ILendingPool lendingPool = ILendingPool(lendingPoolAddress);
         (
             ,
             uint256 availableBorrowsETH,
@@ -228,8 +205,7 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
             uint256 maxBorrowETH,
             ,
             ,
-
-        ) = lendingPool.getReserveData(assetToBorrow);
+        ) = POOL.getReserveData(assetToBorrow);
 
         uint256 maxBorrowableAmount = maxBorrowETH; // assuming assetToBorrow is ETH
 

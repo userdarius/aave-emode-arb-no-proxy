@@ -16,7 +16,6 @@ contract LogicTest is HelperTest {
         logic = new Logic(
             AAVE_ADDRESS_PROVIDER,
             swapRouter,
-            quoteRouter,
             USER,
             Mainnet_wstETH,
             Mainnet_wETH
@@ -48,14 +47,6 @@ contract LogicTest is HelperTest {
     //     vm.stopPrank();
     // }
 
-    function testGetAmountIn() public {
-        uint256 amountIn = logic.getAmountIn(
-            1 ether,
-            Mainnet_wstETH,
-            Mainnet_wETH
-        );
-        console.log("amountIn: ", amountIn);
-    }
 
     function testLongDepositedCraft() public {
         //uint256 amountIn = logic.getAmountIn();
@@ -119,9 +110,6 @@ contract LogicTest is HelperTest {
         console.log(
             "BALANCE TOKEN2 USER AFTER:",
             IERC20(Mainnet_wstETH).balanceOf(USER)
-        );
-        console.log(
-            logic.getAmountIn(5692433031387038829, Mainnet_wETH, Mainnet_wstETH)
         );
     }
 }
