@@ -8,7 +8,6 @@ import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol"
 import "../lib/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import "./AaveTransferHelper.sol";
 import "./interfaces/IFlashLoan.sol";
-import "aave-v3-core/contracts/interfaces/IPool.sol";
 import "forge-std/Test.sol";
 
 contract Logic is FlashLoanSimpleReceiverBase, Test {
@@ -70,8 +69,8 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         uint256 _amountDeposited,
         uint256 _leverageRatio,
         uint256 _shortToLongRate,
-        uint256 _slippagePercent) 
-        external ifOwner {
+        uint256 _slippagePercent
+    ) external ifOwner {
         //pulling the tokens from the user into the contract
         AaveTransferHelper.safeTransferFrom(
             shortTokenAddress,
@@ -79,8 +78,8 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
             address(this),
             _amountDeposited
         );
-        uint256 value = _amountDeposited*_shortToLongRate;//TODO:do we need to multiply by 10**18
-        uint256 amountToFlash = value*_leverageRatio;
+        uint256 value = _amountDeposited * _shortToLongRate; //TODO:do we need to multiply by 10**18
+        uint256 amountToFlash = value * _leverageRatio;
         requestFlashLoan(
             shortTokenAddress,
             amountToFlash,
@@ -151,7 +150,7 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         );
         POOL.borrow(
             shortTokenAddress,
-            _repayAmount-initialShortTokenBalance,
+            _repayAmount - initialShortTokenBalance,
             2,
             referralCode,
             address(this)
@@ -194,28 +193,6 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         );
     }
 
-    function checkMaxBorrowableAmount(
-        address assetToBorrow, // address of the asset to borrow
-        uint256 flashLoanAmount // amount of the flash loan
-    ) internal view returns (bool) {
-        (
-            ,
-            uint256 availableBorrowsETH,
-            ,
-            uint256 maxBorrowETH,
-            ,
-            ,
-        ) = POOL.getReserveData(assetToBorrow);
-
-        uint256 maxBorrowableAmount = maxBorrowETH; // assuming assetToBorrow is ETH
-
-        if (flashLoanAmount <= maxBorrowableAmount) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
     /// @notice Explain to an end user what this does
     /// @dev Explain to a developer any extra details
     /// @param _repayAmount the amount of shortToken needed to repay the flashloan
@@ -237,7 +214,7 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         POOL.withdraw(longTokenAddress, type(uint).max, address(this));
         //sell enough longToken for shortToken to repay the flashloan
         uint256 amountIn = ((_repayAmount / _shortToLongRate) *
-            (100 + _slippagePercent)) / 100; 
+            (100 + _slippagePercent)) / 100;
         //swaping shortToken to longToken to repay the flashloan
         craftSwap(amountIn, _repayAmount, longTokenAddress, shortTokenAddress);
     }
