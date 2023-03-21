@@ -128,8 +128,6 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
             "AMOUNT AFTER SUPPLYING TO AAVE (should be 0)",
             IERC20(longTokenAddress).balanceOf(address(this))
         );
-        uint256 initialShortTokenBalance = IERC20(shortTokenAddress).balanceOf(address(this));
-        checkMaxBorrowableAmount(longTokenAddress, _repayAmount-initialShortTokenBalance);
 
         // borrow phase on aave (this next part is tricky)
         // fetch the pool configuration from the reserve data
@@ -148,6 +146,7 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
             "trying to borrow shortToken. Amount to borrow is ",
             amountIn
         );
+        uint256 initialShortTokenBalance = IERC20(shortTokenAddress).balanceOf(address(this));
         POOL.borrow(
             shortTokenAddress,
             _repayAmount - initialShortTokenBalance,
