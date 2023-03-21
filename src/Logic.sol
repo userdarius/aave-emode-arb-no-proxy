@@ -14,6 +14,7 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
     address public owner;
     address public shortTokenAddress;
     address public longTokenAddress;
+    uint16 public referralCode;//TODO: in the proxy version, only the owner of the implementation should be able to change the ref code
 
     address public immutable swapRouterAddr;
 
@@ -116,7 +117,6 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         console.log(IERC20(longTokenAddress).balanceOf(address(this)));
         // deposit flashloaned longed asset on Aave
         console.log("Supplying the entire balance of longToken to Aave");
-        uint16 referralCode = 0; //TODO: make referralCode a global variable and add a setter so we can change it later
         //supplying max amount of longToken
         POOL.supply(
             longTokenAddress,
@@ -264,7 +264,6 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
             _shortToLongRate,
             _slippagePercent
         );
-        uint16 referralCode = 0;
 
         POOL.flashLoanSimple(
             receiverAddress,
@@ -282,6 +281,7 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         address initiator,
         bytes calldata params
     ) external override returns (bool) {
+        require(initiator == address(this));
         console.log("Entering executeOperation");
         (bool crafting, uint256 shortToLongRate, uint256 slippagePercent) = abi
             .decode(params, (bool, uint256, uint256));
