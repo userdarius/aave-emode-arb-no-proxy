@@ -79,7 +79,7 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
             address(this),
             _amountDeposited
         );
-        uint256 value = _amountDeposited * _shortToLongRate; //TODO:do we need to multiply by 10**18
+        uint256 value = _amountDeposited * _shortToLongRate/(10^18);
         uint256 amountToFlash = value * _leverageRatio;
         requestFlashLoan(
             shortTokenAddress,
@@ -212,7 +212,7 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         //withdraw all longToken from Aave
         POOL.withdraw(longTokenAddress, type(uint).max, address(this));
         //sell enough longToken for shortToken to repay the flashloan
-        uint256 amountIn = ((_repayAmount / _shortToLongRate) *
+        uint256 amountIn = ((_repayAmount * (10^18) / _shortToLongRate) *
             (100 + _slippagePercent)) / 100;
         //swaping shortToken to longToken to repay the flashloan
         craftSwap(amountIn, _repayAmount, longTokenAddress, shortTokenAddress);
