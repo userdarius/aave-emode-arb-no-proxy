@@ -122,7 +122,7 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
             referralCode
         );
         console.log(
-            "AMOUNT AFTER SUPPLYING TO AAVE (should be 0)",
+            "AMOUNT AFTER SUPPLYING TO AAVE (should be 0): ",
             IERC20(longTokenAddress).balanceOf(address(this))
         );
 
@@ -141,14 +141,13 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         // borrow short_token
         console.log("_repayAmount is ", _repayAmount);
         console.log("_shortToLongRate is ", _shortToLongRate);
-        console.log("(_repayAmount * (10^18) / _shortToLongRate) is ", (_repayAmount * _shortToLongRate/ 1000000));
-        uint256 amountIn = (_repayAmount *
-            _shortToLongRate / 1000000) * (100 + _slippagePercent) / 100;
-        console.log("AmountIn is ", amountIn);
+        console.log("(_repayAmount * 1000000 / _shortToLongRate) is ", (_repayAmount * 1000000 / _shortToLongRate));
+        uint256 maxAmountIn = (_repayAmount * 1000000 / _shortToLongRate) * (100 + _slippagePercent) / 100;
+        console.log("AmountIn with slippage is ", maxAmountIn);
         uint256 initialShortTokenBalance = IERC20(shortTokenAddress).balanceOf(address(this));
         POOL.borrow(
             shortTokenAddress,
-            amountIn - initialShortTokenBalance,
+            maxAmountIn - initialShortTokenBalance,
             2,
             referralCode,
             address(this)
@@ -162,7 +161,7 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         console.log("CraftSwap is going to be called");
         craftSwap(
             _repayAmount,
-            shortTokenBalance,
+            maxAmountIn,
             shortTokenAddress,
             longTokenAddress
         );
@@ -222,25 +221,25 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
 
     // SWAP CRAFTER
     function craftSwap(
-        uint256 amountOut,
-        uint256 amountInMaximum,
-        address tokenBeforeSwap,
-        address tokenAfterSwap
+        uint256 _amountOut,
+        uint256 _amountInMaximum,
+        address _tokenBeforeSwap,
+        address _tokenAfterSwap
     ) internal returns (uint256 amountIn) {
         //We use the lowest fee tier for the pool
         console.log("Entering craftSwap");
         uint24 poolFee = 100; //UniswapV3Pool(address_pool).fee();
-        IERC20(tokenBeforeSwap).approve(swapRouterAddr, amountInMaximum);
-        console.log("AmountInMaximum is ", amountInMaximum);
+        IERC20(_tokenBeforeSwap).approve(swapRouterAddr, _amountInMaximum);
+        console.log("AmountInMaximum is ", _amountInMaximum);
         ISwapRouter.ExactOutputSingleParams memory params = ISwapRouter
             .ExactOutputSingleParams({
-                tokenIn: tokenBeforeSwap,
-                tokenOut: tokenAfterSwap,
+                tokenIn: _tokenBeforeSwap,
+                tokenOut: _tokenAfterSwap,
                 fee: poolFee,
                 recipient: address(this),
                 deadline: block.timestamp,
-                amountOut: amountOut,
-                amountInMaximum: amountInMaximum,
+                amountOut: _amountOut,
+                amountInMaximum: _amountInMaximum,
                 sqrtPriceLimitX96: 0
             });
 
@@ -248,6 +247,7 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         console.log("Swap is going to be executed");
         amountIn = ISwapRouter(swapRouterAddr).exactOutputSingle(params);
         console.log("swap has been executed");
+        AaveTransferHelper.safeApprove(_tokenBeforeSwap, address(this), 0);
         return amountIn;
     }
 
