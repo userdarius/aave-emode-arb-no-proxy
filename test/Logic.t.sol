@@ -72,7 +72,7 @@ contract LogicTest is HelperTest {
         vm.startPrank(USER);
         AaveTransferHelper.safeApprove(Mainnet_wETH, address(logic), 2 ether);
 
-        logic.longDepositedCraft(2 ether, 2, 1.11366 ether, 2);
+        logic.longDepositedCraft(2 ether, 2, 1113660, 10);
         vm.stopPrank();
         console.log(
             "BALANCE TOKEN1 LOGIC BETWEEN:",
@@ -91,26 +91,26 @@ contract LogicTest is HelperTest {
             IERC20(Mainnet_wstETH).balanceOf(USER)
         );
 
-        vm.warp(block.timestamp + 100 days);
+        //vm.warp(block.timestamp + 100 days);
 
-        logic.unwindPosition(1, 2);
+        //logic.unwindPosition(1, 2);
 
-        console.log(
-            "BALANCE TOKEN1 LOGIC AFTER:",
-            IERC20(Mainnet_wETH).balanceOf(address(logic))
-        );
-        console.log(
-            "BALANCE TOKEN2 LOGIC AFTER:",
-            IERC20(Mainnet_wstETH).balanceOf(address(logic))
-        );
-        console.log(
-            "BALANCE TOKEN1 USER AFTER:",
-            IERC20(Mainnet_wETH).balanceOf(USER)
-        );
-        console.log(
-            "BALANCE TOKEN2 USER AFTER:",
-            IERC20(Mainnet_wstETH).balanceOf(USER)
-        );
+        //console.log(
+            //"BALANCE TOKEN1 LOGIC AFTER:",
+            //IERC20(Mainnet_wETH).balanceOf(address(logic))
+        //);
+        //console.log(
+            //"BALANCE TOKEN2 LOGIC AFTER:",
+            //IERC20(Mainnet_wstETH).balanceOf(address(logic))
+        //);
+        //console.log(
+            //"BALANCE TOKEN1 USER AFTER:",
+            //IERC20(Mainnet_wETH).balanceOf(USER)
+        //);
+        //console.log(
+            //"BALANCE TOKEN2 USER AFTER:",
+            //IERC20(Mainnet_wstETH).balanceOf(USER)
+        //);
     }
     //TODO: test shortDepositedCraft
     //TODO: test unwind

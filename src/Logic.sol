@@ -95,15 +95,12 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
     /// @param _repayAmount the amount of longToken needed to repay the flashloan
     function prepareRepayementCraft(
         uint256 _repayAmount,
-        uint256 shortToLongRate,
-        uint256 slippagePercent
+        uint256 _shortToLongRate,
+        uint256 _slippagePercent
     ) internal {
         console.log("repayAmount is ", _repayAmount);
-        console.log("shortToLongRate is ", shortToLongRate);
-        console.log("slippagePercent is ", slippagePercent);
-        uint256 amountIn = (_repayAmount *
-            shortToLongRate *
-            (100 + slippagePercent)) / 100;
+        console.log("shortToLongRate is ", _shortToLongRate);
+        console.log("slippagePercent is ", _slippagePercent);
 
         uint256 longTokenBalance = IERC20(longTokenAddress).balanceOf(
             address(this)
@@ -142,14 +139,16 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
 
         console.log("user emode config : ", POOL.getUserEMode(address(this)));
         // borrow short_token
-        console.log(
-            "trying to borrow shortToken. Amount to borrow is ",
-            amountIn
-        );
+        console.log("_repayAmount is ", _repayAmount);
+        console.log("_shortToLongRate is ", _shortToLongRate);
+        console.log("(_repayAmount * (10^18) / _shortToLongRate) is ", (_repayAmount * _shortToLongRate/ 1000000));
+        uint256 amountIn = (_repayAmount *
+            _shortToLongRate / 1000000) * (100 + _slippagePercent) / 100;
+        console.log("AmountIn is ", amountIn);
         uint256 initialShortTokenBalance = IERC20(shortTokenAddress).balanceOf(address(this));
         POOL.borrow(
             shortTokenAddress,
-            _repayAmount - initialShortTokenBalance,
+            amountIn - initialShortTokenBalance,
             2,
             referralCode,
             address(this)
@@ -159,10 +158,10 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
             address(this)
         );
         console.log("shortToken balance is ", shortTokenBalance);
-        console.log("CraftSwap is going to be called");
         //swaping shortToken to longToken to repay the flashloan
+        console.log("CraftSwap is going to be called");
         craftSwap(
-            amountIn,
+            _repayAmount,
             shortTokenBalance,
             shortTokenAddress,
             longTokenAddress
@@ -212,6 +211,9 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         //withdraw all longToken from Aave
         POOL.withdraw(longTokenAddress, type(uint).max, address(this));
         //sell enough longToken for shortToken to repay the flashloan
+        console.log("_repayAmount is ", _repayAmount);
+        console.log("_shortToLongRate is ", _shortToLongRate);
+        console.log("(_repayAmount * (10^18) / _shortToLongRate) is ", (_repayAmount * (10^18) / _shortToLongRate));
         uint256 amountIn = ((_repayAmount * (10^18) / _shortToLongRate) *
             (100 + _slippagePercent)) / 100;
         //swaping shortToken to longToken to repay the flashloan
@@ -228,7 +230,8 @@ contract Logic is FlashLoanSimpleReceiverBase, Test {
         //We use the lowest fee tier for the pool
         console.log("Entering craftSwap");
         uint24 poolFee = 100; //UniswapV3Pool(address_pool).fee();
-
+        IERC20(tokenBeforeSwap).approve(swapRouterAddr, amountInMaximum);
+        console.log("AmountInMaximum is ", amountInMaximum);
         ISwapRouter.ExactOutputSingleParams memory params = ISwapRouter
             .ExactOutputSingleParams({
                 tokenIn: tokenBeforeSwap,
