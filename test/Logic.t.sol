@@ -5,17 +5,14 @@ import "forge-std/Test.sol";
 import "./HelperTest.t.sol";
 import "../src/Logic.sol";
 
-import "../lib/v3-periphery/contracts/interfaces/ISwapRouter.sol";
-
 contract LogicTest is HelperTest {
     Logic logic;
-    ISwapRouter bonjour = ISwapRouter(swapRouter);
 
     function setUp() public override {
         super.setUp();
         logic = new Logic(
             AAVE_ADDRESS_PROVIDER,
-            swapRouter,
+            paraswapRouter,
             USER,
             Mainnet_wstETH,
             Mainnet_wETH
@@ -71,8 +68,8 @@ contract LogicTest is HelperTest {
 
         vm.startPrank(USER);
         AaveTransferHelper.safeApprove(Mainnet_wETH, address(logic), 2 ether);
-
-        logic.longDepositedCraft(2 ether, 2, 1113660, 10);
+        uint256 shortTokenAmountToBorrow = 0; //TODO: read from a file
+        logic.longDepositedCraft(2 ether, 2, 0, shortTokenAmountToBorrow, "");
         vm.stopPrank();
         console.log(
             "BALANCE TOKEN1 LOGIC BETWEEN:",
