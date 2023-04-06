@@ -10,3 +10,6 @@
 	path = lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
 	branch = v4.8.2
+[submodule "lib/aave-v3-periphery"]
+	path = lib/aave-v3-periphery
+	url = https://github.com/eclypse-labs/aave-v3-periphery
