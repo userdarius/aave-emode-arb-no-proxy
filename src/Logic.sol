@@ -5,18 +5,18 @@ import {FlashLoanSimpleReceiverBase} from "aave-v3-core/contracts/flashloan/base
 import {IPoolAddressesProvider} from "aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol";
 import {IERC20} from "aave-v3-core/contracts/dependencies/openzeppelin/contracts/IERC20.sol";
 import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
-import "../lib/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import "./AaveTransferHelper.sol";
 import "./interfaces/IFlashLoan.sol";
+//TODO: import aave periphery
 import "forge-std/Test.sol";
 
-contract Logic is FlashLoanSimpleReceiverBase, Test {
+contract Logic is FlashLoanSimpleReceiverBase {
     address public owner;
     address public shortTokenAddress;
     address public longTokenAddress;
     uint16 public referralCode;//TODO: in the proxy version, only the owner of the implementation should be able to change the ref code
 
-    address public immutable swapRouterAddr;
+    address public immutable paraswapRouterAddr;
 
     modifier ifOwner() {
         console.log("Entering ifOwner");
