@@ -1,0 +1,59 @@
+{
+  "priceRoute": {
+    "blockNumber": 16996970,
+    "network": 1,
+    "srcToken": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+    "srcDecimals": 18,
+    "srcAmount": "2230360691239336281",
+    "destToken": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+    "destDecimals": 18,
+    "destAmount": "2000000000000000000",
+    "bestRoute": [
+      {
+        "percent": 100,
+        "swaps": [
+          {
+            "srcToken": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+            "srcDecimals": 18,
+            "destToken": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+            "destDecimals": 18,
+            "swapExchanges": [
+              {
+                "exchange": "MaverickV1",
+                "srcAmount": "2230360691239336281",
+                "destAmount": "2000000000000000000",
+                "percent": 100,
+                "poolAddresses": [
+                  "0x2ebe19aa2e29c8acadb14be3e7de153b0141e2aa"
+                ],
+                "data": {
+                  "fee": "0.0001",
+                  "exchange": "0x4a585e0f7c18e2c414221d6402652d5e0990e5f8",
+                  "pool": "0x2ebe19aa2e29c8acadb14be3e7de153b0141e2aa",
+                  "tokenA": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+                  "tokenB": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                  "tickSpacing": "9",
+                  "protocolFeeRatio": "0",
+                  "lookback": "10800000000000000000000",
+                  "gasUSD": "0.570413"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "gasCostUSD": "5.637561",
+    "gasCost": "121604",
+    "side": "BUY",
+    "tokenTransferProxy": "0x216b4b4ba9f3e719726886d34a177484278bfcae",
+    "contractAddress": "0xDEF171Fe48CF0115B1d80b88dc8eAB59176FEe57",
+    "contractMethod": "simpleBuy",
+    "partnerFee": 0,
+    "srcUSD": "4131.2078939550",
+    "destUSD": "4131.6000000000",
+    "partner": "anon",
+    "maxImpactReached": false,
+    "hmac": "b3170cf15323e745c1cfd215e56852a6dbbfa1fb"
+  }
+}

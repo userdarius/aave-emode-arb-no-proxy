@@ -69,7 +69,9 @@ contract LogicTest is HelperTest {
         vm.startPrank(USER);
         AaveTransferHelper.safeApprove(Mainnet_wETH, address(logic), 2 ether);
         uint256 shortTokenAmountToBorrow = 0; //TODO: read from a file
-        logic.longDepositedCraft(2 ether, 2, 0, shortTokenAmountToBorrow, "");
+        //paraswap to swap x short token to x long token
+        bytes paraswapData = "";
+        logic.longDepositedCraft(2 ether, 2, 0, shortTokenAmountToBorrow, paraswapData);
         vm.stopPrank();
         console.log(
             "BALANCE TOKEN1 LOGIC BETWEEN:",
